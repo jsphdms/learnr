@@ -1,0 +1,98 @@
+---
+title: "sf"
+author: "Joseph Adams"
+date: "14 April 2019"
+output: html_document
+---
+
+These examples follow this `sf` [vignette](https://r-spatial.github.io/sf/articles/sf1.html)
+
+```{r message = FALSE}
+library(ggplot2)
+library(sf)
+library(dplyr)
+```
+
+`sf` comes with some built in datasets:
+
+```{r}
+nc <- st_read(system.file("shape/nc.shp", package="sf"), quiet = TRUE)
+```
+
+`nc` is an object of class `sf` *and* `data.frame`. So it is a dataframe but also extends the dataframe class. The extra bit you get is the geom column of class `sfc`.
+
+```{r}
+class(nc)
+```
+
+```{r}
+attr(nc, "sf_column")
+```
+
+```{r}
+print(nc[9:15], n = 3)
+```
+
+Retrieve the geometry list-column with `st_geometry`
+
+```{r}
+(nc_geom <- st_geometry(nc))
+```
+
+Here's the first complete geometry in the geometry list-column
+
+```{r}
+nc_geom[[1]]
+```
+
+```{r}
+plot(nc[1], reset = FALSE)
+plot(nc[1,1], col = 'white', add = TRUE)
+```
+
+Only plot the polygons with multiple rings.
+```{r}
+par(mar = c(0,0,1,0))
+(w <- which(sapply(nc_geom, length) > 1))
+## [1]  4 56 57 87 91 95
+plot(nc[w,1], col = 2:7)
+```
+
+The geometry column has it's own special class
+
+```{r}
+class(nc_geom)
+```
+
+A tweaked version of the ggplot2 example in this `sf` vignette on [plotting simple features](https://r-spatial.github.io/sf/articles/sf5.html#ggplot2)
+
+```{r}
+# Download shapefile from:
+# https://geoportal.statistics.gov.uk/datasets/local-authority-districts-december-2018-boundaries-uk-bgc
+
+la <- st_read("sf_files/Local_Authority_Districts_December_2018_Boundaries_UK_BGC.shp",
+              quiet = TRUE)
+
+mw <- read.csv("https://statistics.gov.scot/downloads/cube-table?uri=http%3A%2F%2Fstatistics.gov.scot%2Fdata%2Fmunicipal-waste") %>%
+  filter(Indicator..municipal.waste. == 'Waste Recycled') %>%
+  filter(DateCode == '2011/2012') %>%
+  filter(FeatureCode != 'S92000003')
+
+la_mw <- merge(la, mw, by.x = 'lad18cd', by.y = 'FeatureCode', all.x = FALSE)
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = la_mw["Value"], mapping = aes(fill = Value), colour = "white") +
+  theme(
+    # Declutter
+    panel.background = ggplot2::element_blank(),
+    legend.position = "none",
+    axis.title = ggplot2::element_blank(),
+    axis.ticks = element_blank(),
+    
+    # Text
+    title = element_text(size = 13),
+    axis.text = ggplot2::element_blank()
+  )
+```
